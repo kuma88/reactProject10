@@ -1,40 +1,39 @@
+import { useState, useEffect } from "react";
 import axios from "axios";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 const API = "https://kuma88.pythonanywhere.com";
 const API_WHOAMI = "/whoami";
 
-export function useUsername(signOutCallback){
-    async function getUsername() {
-        console.log("---- Getting user name -----");
-
-        /// get my token
+export function useUsername() {
+    const [username, setUsername] = useState("");
+    const [error, setError] = useState(false);
+    const [loading, setLoading] = useState(false);
+    const [refresh, setRefresh] = useState(false);
+  
+    useEffect(() => {
+      (async () => {
+        setLoading(true);
         const token = await AsyncStorage.getItem("token");
-        console.log(`Token is ${token}`);
-        /// send it to the API and save the user name
-        try {
-            const response = await axios.get(API + API_WHOAMI, {
-            headers: {
-                Authorization: `JWT ${token}`,
-            },
-            });
-            console.log("Got user name!");
-            return response.data.username;
-        } catch (error) {
-            console.log("Error getting user name");
-            if (error.response) {
-            console.log(error.response.data);
-            if (error.response.data.status_code === 401) {
-                signOut();
-                return null;
+        console.log(token);
+        if (token == null) {
+          setError(true);
+          setUsername(null);
+        } else {
+            try {
+                const response = await axios.get(API + API_WHOAMI, {
+                    headers: { Authorization: `JWT ${token}` },
+                });
+                setUsername(response.data.username);
+                setLoading(false);
+                } catch (e) {
+                setError(true);
+                setUsername(null);
+                setLoading(false);
+                }
             }
-            } else {
-            console.log(error);
-            }
-            // We should probably go back to the login screen???
-        }
+        })();
+        setRefresh(false);
+      }, [refresh]);
+      return [username, loading, error, setRefresh];
     }
-
-    return getUsername;
-        
-}
